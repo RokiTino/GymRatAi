@@ -5,6 +5,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
 import PlanGenScreen from '../screens/PlanGenScreen';
+import NutritionProfileScreen from '../screens/NutritionProfileScreen';
 
 const Stack = createStackNavigator();
 
@@ -21,6 +22,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
       <Stack.Screen name="Workout" component={WorkoutScreen} />
       <Stack.Screen name="PlanGen" component={PlanGenScreen} />
+      <Stack.Screen name="NutritionProfile" component={NutritionProfileScreen} />
     </Stack.Navigator>
   );
 }

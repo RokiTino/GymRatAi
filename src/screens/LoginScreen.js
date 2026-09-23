@@ -10,21 +10,22 @@ export default function LoginScreen({ navigation }) {
   const { setProfile } = useUserStore();
 
   async function handleSignIn() {
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
     setLoading(true);
     try {
-      const { user } = await authService.signIn(email, password);
-      if (user) {
-        const profile = await authService.getProfile(user.id);
-        if (profile) {
-          setProfile(profile);
-          navigation.replace('Dashboard');
-        } else {
-          navigation.replace('Profile');
-        }
+      const { user, session } = await authService.signIn(email.trim(), password);
+      if (!user || !session) {
+        throw new Error('No active session was returned. Check your email confirmation and Supabase Auth settings, then try again.');
+      }
+      const profile = await authService.getProfile(user.id);
+      if (profile) {
+        setProfile(profile);
+        navigation.replace('Dashboard');
+      } else {
+        navigation.replace('Profile');
       }
     } catch (error) {
       Alert.alert('Login Failed', error.message);
@@ -34,15 +35,22 @@ export default function LoginScreen({ navigation }) {
   }
 
   async function handleSignUp() {
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
     setLoading(true);
     try {
-      const { user } = await authService.signUp(email, password);
-      if (user) {
+      const { user, session } = await authService.signUp(email.trim(), password);
+      if (user && session) {
         navigation.replace('Profile');
+      } else if (user) {
+        Alert.alert(
+          'Confirm your email',
+          'Supabase created your account but did not start a session. Confirm the email, then sign in to finish your profile.'
+        );
+      } else {
+        throw new Error('Supabase did not return a user. Please try again.');
       }
     } catch (error) {
       Alert.alert('Sign Up Failed', error.message);
@@ -63,6 +71,7 @@ export default function LoginScreen({ navigation }) {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          autoComplete="email"
         />
         <TextInput
           style={styles.input}
@@ -71,6 +80,7 @@ export default function LoginScreen({ navigation }) {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          autoComplete="password"
         />
       </View>
       <TouchableOpacity
