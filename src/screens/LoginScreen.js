@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { authService } from '../services/auth';
 import { useUserStore } from '../store/useUserStore';
+import { colors } from '../theme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -11,14 +22,14 @@ export default function LoginScreen({ navigation }) {
 
   async function handleSignIn() {
     if (!email.trim() || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      Alert.alert('Details needed', 'Enter your email and password to continue.');
       return;
     }
     setLoading(true);
     try {
       const { user, session } = await authService.signIn(email.trim(), password);
       if (!user || !session) {
-        throw new Error('No active session was returned. Check your email confirmation and Supabase Auth settings, then try again.');
+        throw new Error('No active session was returned. Confirm your email and check Supabase Auth settings, then try again.');
       }
       const profile = await authService.getProfile(user.id);
       if (profile) {
@@ -28,7 +39,7 @@ export default function LoginScreen({ navigation }) {
         navigation.replace('Profile');
       }
     } catch (error) {
-      Alert.alert('Login Failed', error.message);
+      Alert.alert('Sign in failed', error.message);
     } finally {
       setLoading(false);
     }
@@ -36,7 +47,7 @@ export default function LoginScreen({ navigation }) {
 
   async function handleSignUp() {
     if (!email.trim() || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      Alert.alert('Details needed', 'Enter your email and password to create an account.');
       return;
     }
     setLoading(true);
@@ -45,69 +56,81 @@ export default function LoginScreen({ navigation }) {
       if (user && session) {
         navigation.replace('Profile');
       } else if (user) {
-        Alert.alert(
-          'Confirm your email',
-          'Supabase created your account but did not start a session. Confirm the email, then sign in to finish your profile.'
-        );
+        Alert.alert('Confirm your email', 'Your account is ready. Confirm the email, then sign in to finish your profile.');
       } else {
-        throw new Error('Supabase did not return a user. Please try again.');
+        throw new Error('We could not create your account. Please try again.');
       }
     } catch (error) {
-      Alert.alert('Sign Up Failed', error.message);
+      Alert.alert('Sign up failed', error.message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>GymRatAi</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#94a3b8"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#94a3b8"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="password"
-        />
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.glow} />
+      <View style={styles.content}>
+        <View style={styles.brandMark}><Text style={styles.brandGlyph}>G</Text></View>
+        <Text style={styles.brand}><Text style={styles.brandAccent}>GYM</Text>RATAI</Text>
+        <Text style={styles.eyebrow}>TRAIN WITH INTENTION</Text>
+        <Text style={styles.title}>Stronger starts{`\n`}right here.</Text>
+        <Text style={styles.subtitle}>Your goals. Your pace. A plan that grows with you.</Text>
+
+        <View style={styles.form}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="you@example.com"
+            placeholderTextColor={colors.muted}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+          />
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your password"
+            placeholderTextColor={colors.muted}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="password"
+          />
+          <TouchableOpacity style={[styles.primaryButton, loading && styles.disabled]} onPress={handleSignIn} disabled={loading}>
+            {loading ? <ActivityIndicator color="#17151B" /> : <Text style={styles.primaryText}>Sign in  →</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} onPress={handleSignUp} disabled={loading}>
+            <Text style={styles.secondaryText}>New here? <Text style={styles.secondaryAccent}>Create account</Text></Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.footer}>CONSISTENCY OVER PERFECTION</Text>
       </View>
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={handleSignIn}
-        disabled={loading}
-      >
-        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Sign In</Text>}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={handleSignUp}
-        disabled={loading}
-      >
-        <Text style={styles.secondaryButtonText}>Don't have an account? <Text style={{color: '#3b82f6'}}>Sign Up</Text></Text>
-      </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a', padding: 24 },
-  title: { color: 'white', fontSize: 30, fontWeight: 'bold', marginBottom: 32 },
-  inputContainer: { width: '100%', marginBottom: 32 },
-  input: { backgroundColor: '#1e293b', color: 'white', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#334155', marginBottom: 16 },
-  primaryButton: { backgroundColor: '#2563eb', width: '100%', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 16 },
-  buttonText: { color: 'white', fontWeight: '600', fontSize: 18 },
-  secondaryButton: { width: '100%', padding: 16, alignItems: 'center' },
-  secondaryButtonText: { color: '#94a3b8', fontWeight: '500' },
+  screen: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', overflow: 'hidden' },
+  glow: { position: 'absolute', width: 310, height: 310, borderRadius: 155, top: -180, right: -80, backgroundColor: colors.purple, opacity: 0.2 },
+  content: { paddingHorizontal: 24, paddingVertical: 25 },
+  brandMark: { height: 48, width: 48, borderRadius: 16, backgroundColor: colors.purple, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  brandGlyph: { color: colors.lime, fontSize: 26, fontWeight: '900' },
+  brand: { color: colors.text, fontSize: 17, letterSpacing: 1.5, fontWeight: '900' },
+  brandAccent: { color: colors.lime },
+  eyebrow: { color: colors.purple, fontSize: 10, letterSpacing: 1.8, fontWeight: '900', marginTop: 26 },
+  title: { color: colors.text, fontSize: 34, lineHeight: 40, fontWeight: '900', marginTop: 8 },
+  subtitle: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 8, marginBottom: 24 },
+  form: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 23, padding: 18 },
+  label: { color: colors.text, fontWeight: '700', fontSize: 12, marginBottom: 7 },
+  input: { minHeight: 50, color: colors.text, backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, borderRadius: 13, paddingHorizontal: 14, fontSize: 14, marginBottom: 16 },
+  primaryButton: { height: 52, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lime, marginTop: 3 },
+  disabled: { opacity: 0.65 },
+  primaryText: { color: '#17151B', fontSize: 14, fontWeight: '900' },
+  secondaryButton: { alignItems: 'center', padding: 15 },
+  secondaryText: { color: colors.muted, fontSize: 12 },
+  secondaryAccent: { color: colors.lime, fontWeight: '800' },
+  footer: { color: colors.muted, fontSize: 9, letterSpacing: 1.7, fontWeight: '700', textAlign: 'center', marginTop: 23 },
 });

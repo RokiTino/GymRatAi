@@ -1,7 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import AppHeader from '../components/AppHeader';
 import { authService } from '../services/auth';
 import { useUserStore } from '../store/useUserStore';
+import { colors } from '../theme';
+
+const experiences = ['beginner', 'intermediate', 'advanced'];
+const trainingDays = [1, 2, 3, 4, 5, 6];
 
 export default function ProfileScreen({ navigation }) {
   const { setProfile } = useUserStore();
@@ -11,119 +25,128 @@ export default function ProfileScreen({ navigation }) {
   const [days, setDays] = useState('3');
 
   useEffect(() => {
+    let mounted = true;
     async function loadProfile() {
       try {
         const user = await authService.getCurrentUser();
-        if (user) {
-          const profile = await authService.getProfile(user.id);
-          if (profile) {
-            setGoal(profile.goal || '');
-            setExperience(profile.experience_level || 'beginner');
-            setDays((profile.training_days_per_week || 3).toString());
-          }
+        if (!user) return;
+        const profile = await authService.getProfile(user.id);
+        if (mounted && profile) {
+          setGoal(profile.goal || '');
+          setExperience(profile.experience_level || 'beginner');
+          setDays(String(profile.training_days_per_week || 3));
         }
-      } catch (e) {
-        console.error(e);
+      } catch (error) {
+        console.warn('Profile could not be loaded', error?.message);
       }
     }
     loadProfile();
+    return () => { mounted = false; };
   }, []);
 
   async function handleSave() {
-    if (!goal) {
-      Alert.alert('Error', 'Please enter your goal');
+    if (!goal.trim()) {
+      Alert.alert('Add your training goal', 'Enter a goal before continuing.');
       return;
     }
     setLoading(true);
     try {
       const user = await authService.getCurrentUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Your sign-in session has expired. Sign in again to save your profile.');
       const profile = {
         user_id: user.id,
-        goal,
+        goal: goal.trim(),
         experience_level: experience,
         equipment_available: ['Gym'],
-        training_days_per_week: parseInt(days),
+        training_days_per_week: Number.parseInt(days, 10),
       };
       await authService.updateProfile(profile);
       setProfile(profile);
-      navigation.replace('Dashboard');
+      navigation.replace('Dashboard', { notice: 'Training profile saved. Your dashboard is ready.' });
     } catch (error) {
-      Alert.alert('Error saving profile', error.message);
+      Alert.alert('Profile not saved', error?.message || 'Check your connection and try again.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Your Profile</Text>
-      <View style={styles.section}>
-        <Text style={styles.label}>Training Goal</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <AppHeader navigation={navigation} title="Training profile" fallbackRoute="Login" />
+      <Text style={styles.eyebrow}>LET'S GET STARTED</Text>
+      <Text style={styles.title}>Your training, your way.</Text>
+      <Text style={styles.subtitle}>A few details help us shape your experience.</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>What's your main goal?</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. Muscle Gain, Strength, Weight Loss"
-          placeholderTextColor="#64748b"
+          placeholder="Build strength, gain muscle…"
+          placeholderTextColor={colors.muted}
           value={goal}
           onChangeText={setGoal}
+          returnKeyType="done"
         />
       </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Experience Level</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Experience level</Text>
         <View style={styles.row}>
-          {['beginner', 'intermediate', 'advanced'].map((lvl) => (
-            <TouchableOpacity
-              key={lvl}
-              style={[styles.pill, experience === lvl && styles.pillActive]}
-              onPress={() => setExperience(lvl)}
-            >
-              <Text style={[styles.pillText, experience === lvl && styles.pillTextActive]}>
-                {lvl}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {experiences.map((level) => {
+            const selected = experience === level;
+            return (
+              <TouchableOpacity key={level} style={[styles.pill, selected && styles.pillSelected]} onPress={() => setExperience(level)}>
+                <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{level}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Days per Week</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>How many days can you train?</Text>
         <View style={styles.row}>
-          {[1, 2, 3, 4, 5, 6].map((d) => (
-            <TouchableOpacity
-              key={d}
-              style={[styles.circle, days === d.toString() && styles.circleActive]}
-              onPress={() => setDays(d.toString())}
-            >
-              <Text style={[styles.circleText, days === d.toString() && styles.circleTextActive]}>{d}</Text>
-            </TouchableOpacity>
-          ))}
+          {trainingDays.map((day) => {
+            const selected = days === String(day);
+            return (
+              <TouchableOpacity key={day} style={[styles.day, selected && styles.daySelected]} onPress={() => setDays(String(day))}>
+                <Text style={[styles.dayText, selected && styles.dayTextSelected]}>{day}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
+        <Text style={styles.helper}>days per week</Text>
       </View>
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={handleSave}
-        disabled={loading}
-      >
-        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Save & Continue</Text>}
+
+      <TouchableOpacity style={[styles.primaryButton, loading && styles.buttonDisabled]} onPress={handleSave} disabled={loading}>
+        {loading ? <ActivityIndicator color="#17151B" /> : <Text style={styles.buttonText}>Save & continue  →</Text>}
       </TouchableOpacity>
+      <Text style={styles.footer}>You can update your training profile any time.</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', padding: 24 },
-  title: { color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 24, marginTop: 40 },
-  section: { marginBottom: 24 },
-  label: { color: '#94a3b8', marginBottom: 8 },
-  input: { backgroundColor: '#1e293b', color: 'white', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#334155' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  pill: { flex: 1, padding: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#334155', backgroundColor: '#1e293b' },
-  pillActive: { backgroundColor: '#2563eb', borderColor: '#3b82f6' },
-  pillText: { color: '#94a3b8', textTransform: 'capitalize' },
-  pillTextActive: { color: 'white', fontWeight: '600' },
-  circle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#334155', backgroundColor: '#1e293b' },
-  circleActive: { backgroundColor: '#2563eb', borderColor: '#3b82f6' },
-  circleText: { color: '#94a3b8' },
-  circleTextActive: { color: 'white', fontWeight: '600' },
-  primaryButton: { backgroundColor: '#2563eb', width: '100%', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 32, marginBottom: 40 },
-  buttonText: { color: 'white', fontWeight: '600', fontSize: 18 },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { paddingHorizontal: 22, paddingTop: 20, paddingBottom: 40 },
+  eyebrow: { color: colors.lime, fontSize: 10, fontWeight: '800', letterSpacing: 1.7, marginBottom: 10 },
+  title: { color: colors.text, fontSize: 28, lineHeight: 34, fontWeight: '900' },
+  subtitle: { color: colors.muted, fontSize: 14, marginTop: 8, marginBottom: 20 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 17, marginBottom: 12 },
+  label: { color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 13 },
+  input: { minHeight: 52, backgroundColor: colors.background, color: colors.text, paddingHorizontal: 14, borderRadius: 13, borderWidth: 1, borderColor: colors.border, fontSize: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pill: { flex: 1, paddingHorizontal: 8, paddingVertical: 11, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+  pillSelected: { backgroundColor: colors.purple, borderColor: colors.purple },
+  pillText: { color: colors.muted, fontSize: 11, textTransform: 'capitalize' },
+  pillTextSelected: { color: colors.text, fontWeight: '800' },
+  day: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+  daySelected: { backgroundColor: colors.lime, borderColor: colors.lime },
+  dayText: { color: colors.muted, fontSize: 14, fontWeight: '700' },
+  dayTextSelected: { color: '#17151B' },
+  helper: { color: colors.muted, fontSize: 11, marginTop: 10 },
+  primaryButton: { backgroundColor: colors.lime, minHeight: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 11 },
+  buttonDisabled: { opacity: 0.65 },
+  buttonText: { color: '#17151B', fontWeight: '900', fontSize: 15 },
+  footer: { color: colors.muted, textAlign: 'center', fontSize: 11, marginTop: 16 },
 });

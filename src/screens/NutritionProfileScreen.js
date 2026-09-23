@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -10,16 +11,8 @@ import {
   View,
 } from 'react-native';
 import { loadNutritionProfile, saveNutritionProfile } from '../services/nutritionService';
-
-const COLORS = {
-  background: '#0f172a',
-  card: '#1e293b',
-  border: '#334155',
-  text: '#f8fafc',
-  muted: '#94a3b8',
-  accent: '#2563eb',
-  success: '#34d399',
-};
+import AppHeader from '../components/AppHeader';
+import { colors } from '../theme';
 
 const activities = [
   ['sedentary', 'Sedentary'],
@@ -76,6 +69,7 @@ export default function NutritionProfileScreen({ navigation }) {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -110,14 +104,13 @@ export default function NutritionProfileScreen({ navigation }) {
       return;
     }
     setSaving(true);
+    setSaved(false);
     try {
       const result = await saveNutritionProfile({ ...form, age: Number(form.age), height: Number(form.height), weight: Number(form.weight) });
-      Alert.alert(
-        'Saved securely',
-        result.integration === 'awaiting_myfitnesspal_partner_access'
-          ? 'Your nutrition profile is encrypted in Supabase. MyFitnessPal transfer will be enabled after partner API access is approved.'
-          : 'Your nutrition profile was saved.'
-      );
+      setSaved(true);
+      if (result.integration !== 'awaiting_myfitnesspal_partner_access') {
+        Alert.alert('Saved securely', 'Your nutrition profile was saved.');
+      }
     } catch (error) {
       Alert.alert('Could not save', error?.message || 'Sign in and try again.');
     } finally {
@@ -128,7 +121,8 @@ export default function NutritionProfileScreen({ navigation }) {
   if (loading) {
     return (
       <View style={[styles.container, styles.loading]}>
-        <ActivityIndicator color={COLORS.accent} />
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <ActivityIndicator color={colors.lime} />
         <Text style={styles.muted}>Loading your encrypted nutrition profile…</Text>
       </View>
     );
@@ -136,9 +130,8 @@ export default function NutritionProfileScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.backText}>‹  Back</Text>
-      </TouchableOpacity>
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <AppHeader navigation={navigation} title="Nutrition profile" />
       <Text style={styles.eyebrow}>NUTRITION</Text>
       <Text style={styles.title}>Your nutrition profile</Text>
       <Text style={styles.subtitle}>
@@ -153,7 +146,7 @@ export default function NutritionProfileScreen({ navigation }) {
           onChangeText={(value) => update('age', value.replace(/[^0-9]/g, ''))}
           keyboardType="number-pad"
           placeholder="Age (18+)"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.muted}
           maxLength={3}
         />
         <Text style={styles.label}>Biological sex</Text>
@@ -167,7 +160,7 @@ export default function NutritionProfileScreen({ navigation }) {
             onChangeText={(value) => update('height', value.replace(/[^0-9.]/g, ''))}
             keyboardType="decimal-pad"
             placeholder={form.height_unit === 'cm' ? 'Height in cm' : 'Height in inches'}
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.muted}
           />
           <ChoiceRow options={ [['cm', 'cm'], ['inches', 'in']] } value={form.height_unit} onChange={(value) => update('height_unit', value)} />
         </View>
@@ -180,7 +173,7 @@ export default function NutritionProfileScreen({ navigation }) {
             onChangeText={(value) => update('weight', value.replace(/[^0-9.]/g, ''))}
             keyboardType="decimal-pad"
             placeholder={form.weight_unit === 'kg' ? 'Weight in kg' : 'Weight in lb'}
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.muted}
           />
           <ChoiceRow options={ [['kg', 'kg'], ['lb', 'lb']] } value={form.weight_unit} onChange={(value) => update('weight_unit', value)} />
         </View>
@@ -195,16 +188,23 @@ export default function NutritionProfileScreen({ navigation }) {
         <ChoiceRow options={approaches} value={form.approach} onChange={(value) => update('approach', value)} wrap />
 
         <Text style={styles.label}>Allergies to exclude</Text>
-        <View style={styles.choiceRow}>
+        <Text style={styles.allergyHint}>Swipe to see every option</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator
+          persistentScrollbar
+          contentContainerStyle={styles.allergyChoices}
+          keyboardShouldPersistTaps="handled"
+        >
           {allergyOptions.map((item) => {
             const active = form.allergies.includes(item);
             return (
-              <TouchableOpacity key={item} onPress={() => toggleAllergy(item)} style={[styles.choice, active && styles.choiceActive]}>
+              <TouchableOpacity key={item} onPress={() => toggleAllergy(item)} style={[styles.choice, active && styles.choiceActive]} accessibilityRole="checkbox" accessibilityState={{ checked: active }}>
                 <Text style={[styles.choiceText, active && styles.choiceTextActive]}>{item}</Text>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.privacyCard}>
@@ -217,8 +217,18 @@ export default function NutritionProfileScreen({ navigation }) {
         </Text>
       </View>
 
+      {saved ? (
+        <View style={styles.successCard} accessibilityLiveRegion="polite">
+          <Text style={styles.successIcon}>✓</Text>
+          <View style={styles.successCopy}>
+            <Text style={styles.successTitle}>Profile saved securely</Text>
+            <Text style={styles.successText}>Your encrypted nutrition profile is stored in Supabase. MyFitnessPal sync will be available after partner approval.</Text>
+          </View>
+        </View>
+      ) : null}
+
       <TouchableOpacity style={[styles.saveButton, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
-        {saving ? <ActivityIndicator color="white" /> : <Text style={styles.saveText}>Save encrypted profile</Text>}
+        {saving ? <ActivityIndicator color="#17151B" /> : <Text style={styles.saveText}>{saved ? 'Save changes' : 'Save nutrition profile'}</Text>}
       </TouchableOpacity>
       <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
         <Text style={styles.cancelText}>Cancel</Text>
@@ -228,33 +238,38 @@ export default function NutritionProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 22, paddingBottom: 48 },
   loading: { justifyContent: 'center', alignItems: 'center', gap: 12 },
-  backButton: { marginTop: 24, marginBottom: 26 },
-  backText: { color: '#60a5fa', fontSize: 16, fontWeight: '600' },
-  eyebrow: { color: COLORS.success, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },
-  title: { color: COLORS.text, fontSize: 28, fontWeight: '800', marginBottom: 8 },
-  subtitle: { color: COLORS.muted, fontSize: 15, lineHeight: 22, marginBottom: 20 },
-  card: { backgroundColor: COLORS.card, padding: 18, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border },
-  label: { color: '#cbd5e1', fontSize: 14, fontWeight: '600', marginTop: 17, marginBottom: 9 },
-  input: { backgroundColor: '#0f172a', borderColor: COLORS.border, borderWidth: 1, color: COLORS.text, padding: 14, borderRadius: 12, fontSize: 16 },
+  eyebrow: { color: colors.lime, fontSize: 10, fontWeight: '800', letterSpacing: 1.7, marginBottom: 8 },
+  title: { color: colors.text, fontSize: 28, fontWeight: '900', marginBottom: 8 },
+  subtitle: { color: colors.muted, fontSize: 14, lineHeight: 21, marginBottom: 20 },
+  card: { backgroundColor: colors.surface, padding: 18, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+  label: { color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 17, marginBottom: 9 },
+  input: { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, color: colors.text, padding: 14, borderRadius: 13, fontSize: 15 },
   measureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   measureInput: { flex: 1 },
   choiceRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   choiceWrap: { flexWrap: 'wrap' },
-  choice: { backgroundColor: '#0f172a', borderColor: COLORS.border, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 4 },
-  choiceActive: { backgroundColor: COLORS.accent, borderColor: '#60a5fa' },
-  choiceText: { color: COLORS.muted, fontSize: 13, textTransform: 'capitalize' },
-  choiceTextActive: { color: '#fff', fontWeight: '700' },
-  privacyCard: { backgroundColor: '#10271f', borderColor: '#1f513e', borderWidth: 1, padding: 16, borderRadius: 16, marginTop: 18 },
-  privacyTitle: { color: '#6ee7b7', fontWeight: '800', fontSize: 16, marginBottom: 7 },
-  privacyText: { color: '#cbd5e1', lineHeight: 20 },
-  pendingText: { color: '#fcd34d', lineHeight: 20, marginTop: 10 },
-  saveButton: { backgroundColor: COLORS.accent, borderRadius: 13, alignItems: 'center', padding: 16, marginTop: 22 },
+  allergyHint: { color: colors.muted, fontSize: 10, marginTop: -2, marginBottom: 7 },
+  allergyChoices: { gap: 8, paddingBottom: 11, paddingRight: 16 },
+  choice: { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, paddingVertical: 11, marginBottom: 2 },
+  choiceActive: { backgroundColor: colors.purple, borderColor: colors.purple },
+  choiceText: { color: colors.muted, fontSize: 12, textTransform: 'capitalize' },
+  choiceTextActive: { color: colors.text, fontWeight: '800' },
+  privacyCard: { backgroundColor: colors.surfaceRaised, borderColor: colors.border, borderWidth: 1, padding: 16, borderRadius: 18, marginTop: 18 },
+  privacyTitle: { color: colors.lime, fontWeight: '800', fontSize: 14, marginBottom: 7 },
+  privacyText: { color: colors.text, fontSize: 12, lineHeight: 18 },
+  pendingText: { color: colors.lime, fontSize: 11, lineHeight: 17, marginTop: 10 },
+  successCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#253322', borderColor: '#536840', borderWidth: 1, padding: 14, borderRadius: 17, marginTop: 16 },
+  successIcon: { color: colors.lime, fontSize: 16, fontWeight: '900' },
+  successCopy: { flex: 1 },
+  successTitle: { color: colors.lime, fontWeight: '800', fontSize: 13 },
+  successText: { color: colors.text, fontSize: 11, lineHeight: 16, marginTop: 4 },
+  saveButton: { backgroundColor: colors.lime, borderRadius: 15, alignItems: 'center', justifyContent: 'center', minHeight: 54, paddingHorizontal: 16, marginTop: 18 },
   disabled: { opacity: 0.6 },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  saveText: { color: '#17151B', fontSize: 14, fontWeight: '900' },
   cancelButton: { alignItems: 'center', padding: 16, marginTop: 4 },
-  cancelText: { color: COLORS.muted, fontWeight: '600' },
-  muted: { color: COLORS.muted },
+  cancelText: { color: colors.muted, fontWeight: '700' },
+  muted: { color: colors.muted },
 });
