@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -71,7 +73,8 @@ export default function ProfileScreen({ navigation }) {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <AppHeader navigation={navigation} title="Training profile" fallbackRoute="Login" />
       <Text style={styles.eyebrow}>LET'S GET STARTED</Text>
       <Text style={styles.title}>Your training, your way.</Text>
@@ -122,7 +125,8 @@ export default function ProfileScreen({ navigation }) {
         {loading ? <ActivityIndicator color="#17151B" /> : <Text style={styles.buttonText}>Save & continue  →</Text>}
       </TouchableOpacity>
       <Text style={styles.footer}>You can update your training profile any time.</Text>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

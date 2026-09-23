@@ -1,0 +1,46 @@
+name: Expo CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: expo-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Expo app
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      EXPO_PUBLIC_SUPABASE_KEY: ci-placeholder-publishable-key
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Enable Yarn
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Check Expo project health
+        run: npx expo-doctor
+
+      - name: Bundle iOS
+        run: npx expo export --platform ios --output-dir "$RUNNER_TEMP/gymratai-export-ios"
+
+      - name: Bundle Android
+        run: npx expo export --platform android --output-dir "$RUNNER_TEMP/gymratai-export-android"

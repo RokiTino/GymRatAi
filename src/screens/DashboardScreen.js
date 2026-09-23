@@ -79,9 +79,9 @@ export default function DashboardScreen({ navigation, route }) {
           </View>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Open nutrition profile"
+            accessibilityLabel="Open training profile"
             style={styles.avatar}
-            onPress={() => navigation.navigate('NutritionProfile')}
+            onPress={() => navigation.navigate('Profile')}
           >
             <Text style={styles.avatarText}>{firstName?.[0]?.toUpperCase() || 'G'}</Text>
           </TouchableOpacity>
