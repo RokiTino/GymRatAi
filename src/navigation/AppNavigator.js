@@ -1,0 +1,26 @@
+import React from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
+import LoginScreen from '../screens/LoginScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import WorkoutScreen from '../screens/WorkoutScreen';
+import PlanGenScreen from '../screens/PlanGenScreen';
+
+const Stack = createStackNavigator();
+
+export default function AppNavigator() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyle: { backgroundColor: '#0f172a' }
+      }}
+    >
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen name="Workout" component={WorkoutScreen} />
+      <Stack.Screen name="PlanGen" component={PlanGenScreen} />
+    </Stack.Navigator>
+  );
+}
