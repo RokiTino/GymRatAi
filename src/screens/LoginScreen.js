@@ -11,14 +11,12 @@ import {
   View,
 } from 'react-native';
 import { authService } from '../services/auth';
-import { useUserStore } from '../store/useUserStore';
 import { colors } from '../theme';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { setProfile } = useUserStore();
 
   async function handleSignIn() {
     if (!email.trim() || !password) {
@@ -31,13 +29,7 @@ export default function LoginScreen({ navigation }) {
       if (!user || !session) {
         throw new Error('No active session was returned. Confirm your email and check Supabase Auth settings, then try again.');
       }
-      const profile = await authService.getProfile(user.id);
-      if (profile) {
-        setProfile(profile);
-        navigation.replace('Dashboard');
-      } else {
-        navigation.replace('Profile');
-      }
+
     } catch (error) {
       Alert.alert('Sign in failed', error.message);
     } finally {
@@ -53,11 +45,9 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       const { user, session } = await authService.signUp(email.trim(), password);
-      if (user && session) {
-        navigation.replace('Profile');
-      } else if (user) {
+      if (user && !session) {
         Alert.alert('Confirm your email', 'Your account is ready. Confirm the email, then sign in to finish your profile.');
-      } else {
+      } else if (!user) {
         throw new Error('We could not create your account. Please try again.');
       }
     } catch (error) {

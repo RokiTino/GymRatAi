@@ -23,6 +23,7 @@ const tabs = [
 export default function DashboardScreen({ navigation, route }) {
   const { profile, setProfile } = useUserStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [notice, setNotice] = useState(route.params?.notice || '');
 
   useEffect(() => {
@@ -86,6 +87,15 @@ export default function DashboardScreen({ navigation, route }) {
             <Text style={styles.avatarText}>{firstName?.[0]?.toUpperCase() || 'G'}</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity accessibilityRole="button" disabled={signingOut} onPress={async () => {
+          setSigningOut(true);
+          try { await authService.signOut(); }
+          catch (error) { Alert.alert('Sign out failed', error.message); }
+          finally { setSigningOut(false); }
+        }} style={{ alignSelf: 'flex-end', padding: 12 }}>
+          <Text style={{ color: colors.muted }}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
+        </TouchableOpacity>
 
         {notice ? (
           <TouchableOpacity style={styles.notice} onPress={() => setNotice('')} accessibilityRole="button">
