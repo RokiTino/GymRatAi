@@ -75,7 +75,7 @@ export default function ProfileScreen({ navigation }) {
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <AppHeader navigation={navigation} title="Training profile" fallbackRoute="Login" />
+      <AppHeader navigation={navigation} title="Training profile" fallbackRoute="Dashboard" />
       <Text style={styles.eyebrow}>LET'S GET STARTED</Text>
       <Text style={styles.title}>Your training, your way.</Text>
       <Text style={styles.subtitle}>A few details help us shape your experience.</Text>
